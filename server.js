@@ -12,12 +12,20 @@ let users = {}; // Lưu trữ người dùng online
 
 // Khi có client kết nối
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
   // Đăng ký user khi kết nối
   socket.on('register', (userId) => {
     users[userId] = socket.id;
-    console.log(`User ${userId} connected with socket ID: ${socket.id}`);
+    Object.keys(users).forEach((key) => {
+      if (users[key] !== socket.id) {
+        var socketId = users[key];
+        io.to(socketId).emit('message_connection', { userId: userId, status: 'connection' });
+        console.log("connection "+userId)
+      }
+    });
+  });
+
+  socket.on('get_list_user', (data) => {
+    socket.emit('list_user', { users: users, status: 'sent' });
   });
 
   // Gửi tin nhắn
@@ -47,15 +55,23 @@ io.on('connection', (socket) => {
 
   // Xử lý khi user disconnect
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    var userId = 0
     Object.keys(users).forEach((key) => {
       if (users[key] === socket.id) {
         delete users[key];
+        userId = key
       }
     });
+    if(userId > 0) {
+      Object.keys(users).forEach((key) => { 
+        var socketId = users[key];
+        io.to(socketId).emit('message_disconnect', { userId: userId, status: 'disconnect' });
+        console.log("disconnect "+userId)
+      })
+    }
   });
 });
 
 server.listen(9000, () => {
-  console.log('Server is running on http://localhost:3000');
+  console.log('Server is running on http://localhost:9000');
 });
